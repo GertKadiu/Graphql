@@ -2,6 +2,12 @@
   "expo": {
     "name": "bareProject",
     "slug": "bareProject",
-    "version": "1.0.0"
+    "version": "1.0.0",
+    "newArchEnabled": true,
+    "extra": {
+      "expo-network-security": {
+        "cleartextTrafficPermitted": true
+      }
+    }
   }
 }
