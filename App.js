@@ -6,6 +6,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  View,
+  Button,
+  Alert,
 } from "react-native";
 import ListGames from "./components/ListGame";
 import CreateGames from "./components/CreateGames";
@@ -14,8 +17,31 @@ import SpecificGame from "./components/SpecificGame";
 import ChosenAuthor from "./components/ChosenAuthor";
 import ListAthuthor from "./components/ListAthuthor";
 import AvancedQuery from "./components/AvancedQuery";
+import * as ImagePicker from "expo-image-picker";
+import { uploadToFirebase } from "./firebase-config";
 
 export default function App() {
+  const [permission, requestPermission] = ImagePicker.useCameraPermissions();
+
+  const takePhoto = async() => {
+    try {
+    const cameraResp = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
+      quality: 1,
+    })
+
+    if (!cameraResp.canceled) {
+      const {uri} = cameraResp.assets[0]
+       const filename = uri.split("/").pop()
+     const uploadResp =  await uploadToFirebase(uri, filename, (v) => console.log(v))
+     console.log(uploadResp)
+    }
+  }catch (e) {
+    Alert.alert("Error uploading Image" + e.message)
+  }
+  }
+
   const {
     newGame,
     setNewGame,
@@ -32,8 +58,9 @@ export default function App() {
     handleDeleteGame,
   } = useGameState();
 
-  if (loading) return <ActivityIndicator size="large" color="#0000ff" />;
-  if (error) return <Text style={styles.error}>Error: {error.message}</Text>;
+  if (!permission) {
+    return <ActivityIndicator size="large" color="#0000ff" />;
+  }
 
   return (
     <KeyboardAvoidingView
@@ -41,37 +68,58 @@ export default function App() {
       style={{ flex: 1 }}
     >
       <StatusBar style="auto" />
-      <FlatList
-        style={styles.container}
-        ListHeaderComponent={
-          <>
-            <CreateGames
-              value={editGame.id ? editGame : newGame}
-              onChangeText={editGame.id ? setEditGame : setNewGame}
-              onSubmit={editGame.id ? handleEditGame : handleAddGame}
-              isEditing={!!editGame.id}
+
+      {permission.status !== ImagePicker.PermissionStatus.GRANTED ? (
+        <View style={styles.permissionContainer}>
+          <Text>Permission not Granted - {permission.status}.</Text>
+          <Button title="Request Permission" onPress={requestPermission} />
+        </View>
+      ) : (
+        <>
+        <View style={{marginTop:50}}>
+             <Text>Working with firebase and Image Picker</Text>
+             <Button title="Take picture" onPress={takePhoto} />
+        </View>
+     
+          {loading ? (
+            <ActivityIndicator size="large" color="#0000ff" />
+          ) : error ? (
+            <Text style={styles.error}>Error: {error.message}</Text>
+          ) : (
+            <FlatList
+              style={styles.container}
+              ListHeaderComponent={
+                <>
+                  <CreateGames
+                    value={editGame.id ? editGame : newGame}
+                    onChangeText={editGame.id ? setEditGame : setNewGame}
+                    onSubmit={editGame.id ? handleEditGame : handleAddGame}
+                    isEditing={!!editGame.id}
+                  />
+                  <SpecificGame />
+                  <Text style={styles.header}>List of Games</Text>
+                </>
+              }
+              data={data.games}
+              keyExtractor={(item, index) => `${item.id}-${index}`}
+              renderItem={({ item }) => (
+                <ListGames
+                  game={item}
+                  handleDeleteGame={handleDeleteGame}
+                  setEditGame={setEditGame}
+                />
+              )}
+              ListFooterComponent={
+                <>
+                  <ListAthuthor authorsData={authorsData} />
+                  <ChosenAuthor authorData={authorData} />
+                  <AvancedQuery avancedQuery={avancedQuery} />
+                </>
+              }
             />
-            <SpecificGame />
-            <Text style={styles.header}>List of Games</Text>
-          </>
-        }
-        data={data.games}
-        keyExtractor={(item, index) => `${item.id}-${index}`}
-        renderItem={({ item }) => (
-          <ListGames
-            game={item}
-            handleDeleteGame={handleDeleteGame}
-            setEditGame={setEditGame}
-          />
-        )}
-        ListFooterComponent={
-          <>
-            <ListAthuthor authorsData={authorsData} />
-            <ChosenAuthor authorData={authorData} />
-            <AvancedQuery avancedQuery={avancedQuery} />
-          </>
-        }
-      />
+          )}
+        </>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -87,11 +135,17 @@ const styles = StyleSheet.create({
     color: "red",
     fontSize: 16,
     marginTop: 50,
+    textAlign: "center",
   },
   header: {
     fontSize: 22,
     fontWeight: "bold",
     marginBottom: 10,
     textAlign: "center",
+  },
+  permissionContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

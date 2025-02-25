@@ -2,12 +2,22 @@
   "expo": {
     "name": "bareProject",
     "slug": "bareProject",
+    "orientation":"default",
     "version": "1.0.0",
     "newArchEnabled": true,
     "extra": {
       "expo-network-security": {
         "cleartextTrafficPermitted": true
       }
-    }
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow $(PRODUCT_NAME) to access your photo",
+          "cameraPermission":"Allow $(PRODUCT_NAME) to access your camera"
+        }
+      ]
+    ]
   }
 }
